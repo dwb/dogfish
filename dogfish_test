@@ -1,0 +1,322 @@
+#!/usr/bin/env bash
+# vim: ts=2:sw=2:expandtab:foldmethod=marker
+
+# dogfish test suite
+# by Dan Brown <dan@stompydan.net>
+# https://github.com/dwb/dogfish
+# 
+# Copyright (c) 2013, Dan Brown
+# This is licenced under the 3-clause BSD license. See the LICENSE file
+# supplied in this repository for the full text.
+
+# Setup {{{
+
+DOGFISH_MYSQL_OPTS=$DOGFISH_MYSQL_OPTS
+DOGFISH_PG_OPTS=$DOGFISH_PG_OPTS
+
+set -e
+set -o nounset
+
+cd $(dirname $0)
+root_dir=$(pwd)
+
+test_template_dir=test_template
+test_dir=test_run
+db_name=dogfish_test
+db_type=
+
+if [[ ! -f .dogfish-test-warning-given ]]; then
+  echo "This test suite will destroy databases called ${db_name} in your"
+  echo "MySQL and PostgreSQL servers pointed to by your default mysql"
+  echo "and psql client settings. If you don't want this to happen,"
+  echo "^C now. To continue, hit Enter."
+  read
+  touch .dogfish-test-warning-given
+fi
+
+# }}}
+# General helpers {{{
+
+function dogfish() {
+  ./dogfish $*
+  return $?
+}
+
+function inform() {
+  echo $*
+}
+
+function die() {
+  echo -e $* >&2
+  exit 1
+}
+
+function pass() {
+  echo -e "\033[1;32mPASS\033[0m"
+}
+
+function fail() {
+  if [[ -n ${1:-} ]]; then
+    local msg=": $1"
+  else
+    local msg=""
+  fi
+  die "\033[1;31mFAIL\033[0m${msg}"
+  return $?
+}
+
+function setup_test() {
+  cd "$root_dir"
+  rm -rf "$test_dir"
+  cp -R "$test_template_dir" "$test_dir"
+  cd "$test_dir"
+  db_type=
+}
+
+function use_mysql() {
+  mv disabled_mysql_migrations mysql_migrations
+  mysql ${DOGFISH_MYSQL_OPTS} -e "DROP DATABASE IF EXISTS $db_name; CREATE DATABASE $db_name;" 2>&1 | while read line; do
+    if [[ $line == ERROR* ]]; then
+      fail "$line"
+    fi
+  done
+  assert_success "MySQL setup failed"
+  db_type=mysql
+}
+
+function mysql_db_exec_to_stderr() {
+  mysql ${DOGFISH_MYSQL_OPTS} -BN $* $db_name  3>&1 1>&2- 2>&3- | while read line; do
+    if [[ $line == ERROR\ * ]]; then
+      fail "$line"
+      return $?
+    fi
+  done
+  return $?
+}
+
+function mysql_db_exec() {
+  mysql_db_exec_to_stderr $* 2>&1
+  return $?
+}
+
+function use_pg() {
+  mv disabled_pg_migrations pg_migrations
+  psql -q ${DOGFISH_PG_OPTS} <<END
+  DROP DATABASE IF EXISTS $db_name;
+  CREATE DATABASE $db_name;
+END
+  assert_success "PostgreSQL setup failed"
+  db_type=pg
+}
+
+function pg_db_exec() {
+  psql ${DOGFISH_PG_OPTS} -qtA $db_name $*
+  return $?
+}
+
+function lines_to_space_sep_words() {
+   tr "\n" ' ' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//'
+}
+
+# }}}
+# Assertions {{{
+
+function assert_equal() {
+  if [[ $1 != $2 ]]; then
+    if [[ -n ${3:-} ]]; then
+      local msg=$3
+    else
+      local msg="Expected '$2' to equal '$1'"
+    fi
+    fail "$msg"
+  fi
+}
+
+function assert_success() {
+  if [[ $? -ne 0 ]]; then
+    fail "${1:-Success expected}"
+  fi
+}
+
+function assert_failure() {
+  if [[ $? -eq 0 ]]; then
+    fail "$1"
+  fi
+}
+
+function assert_tables_exist() {
+  assert_${db_type}_tables_exist "$1"
+  return $?
+}
+
+function assert_mysql_tables_exist() {
+  assert_equal "$1" \
+    "$(echo "SHOW TABLES;" | mysql_db_exec | lines_to_space_sep_words)"
+}
+
+function assert_pg_tables_exist() {
+  assert_equal "$1" \
+    "$(echo "\dt" | pg_db_exec | cut -d \| -f 2 | lines_to_space_sep_words)"
+}
+
+function assert_migrations_recorded() {
+  assert_${db_type}_migrations_recorded "$1"
+}
+
+function assert_mysql_migrations_recorded() {
+  assert_equal "$1" \
+    "$(echo "SELECT * FROM schema_migrations ORDER BY migration_id ASC" | \
+       mysql_db_exec | lines_to_space_sep_words)"
+}
+
+function assert_pg_migrations_recorded() {
+  assert_equal "$1" \
+    "$(echo "SELECT * FROM schema_migrations ORDER BY migration_id ASC" | \
+       pg_db_exec | lines_to_space_sep_words)"
+}
+
+function run_test() {
+  echo -n "Testing $1... "
+  if test_$1; then
+    pass
+  else
+    exit 1
+  fi
+}
+
+# }}}
+
+### Tests
+
+function test_version() {
+  for flag in -v --version; do
+    assert_equal 1 $(dogfish $flag | wc -l) "version not returned"
+  done
+}
+
+function test_help() {
+  for flag in -h --help; do
+    if [[ $(dogfish $flag | wc -l) -lt 5 ]]; then
+      fail "help not long enough"
+    fi
+  done
+}
+
+function test_action_required() {
+  dogfish 2>/dev/null
+  assert_failure "dogfish should error on no action given"
+}
+
+function test_db_name_required() {
+  dogfish migrate 2>/dev/null
+  assert_failure "dogfish should error on no database name given"
+}
+
+function test_full_mysql_migration() {
+  use_mysql
+  assert_tables_exist ""
+  dogfish migrate $db_name >/dev/null
+  assert_success
+  assert_tables_exist "schema_migrations stuff things"
+  assert_migrations_recorded "1234 5678"
+}
+
+function test_full_pg_migration() {
+  use_pg
+  assert_tables_exist ""
+  dogfish migrate $db_name >/dev/null
+  assert_success
+  assert_tables_exist "schema_migrations stuff things"
+  assert_migrations_recorded "1234 5678"
+}
+
+function test_empty_mysql_migration_creates_schema_migrations_table() {
+  use_mysql
+  assert_tables_exist ""
+  rm ${db_type}_migrations/*.sql
+  dogfish migrate $db_name >/dev/null
+  assert_tables_exist "schema_migrations"
+  assert_migrations_recorded ""
+}
+
+function test_empty_pg_migration_creates_schema_migrations_table() {
+  use_pg
+  assert_tables_exist ""
+  rm ${db_type}_migrations/*.sql
+  dogfish migrate $db_name >/dev/null
+  assert_tables_exist "schema_migrations"
+  assert_migrations_recorded ""
+}
+
+function test_mysql_rollback() {
+  use_mysql
+  dogfish migrate $db_name >/dev/null
+  dogfish rollback $db_name >/dev/null
+  assert_tables_exist "schema_migrations"
+  assert_migrations_recorded ""
+}
+
+function test_pg_rollback() {
+  use_pg
+  dogfish migrate $db_name >/dev/null
+  dogfish rollback $db_name >/dev/null
+  assert_tables_exist "schema_migrations"
+  assert_migrations_recorded ""
+}
+
+function test_mysql_migrate_to_version() {
+  use_mysql
+  dogfish migrate $db_name 1234 >/dev/null
+  assert_success
+  assert_tables_exist "schema_migrations stuff"
+  assert_migrations_recorded "1234"
+  dogfish migrate $db_name >/dev/null
+  assert_tables_exist "schema_migrations stuff things"
+  assert_migrations_recorded "1234 5678"
+}
+
+function test_pg_migrate_to_version() {
+  use_pg
+  dogfish migrate $db_name 1234 >/dev/null
+  assert_success
+  assert_tables_exist "schema_migrations stuff"
+  assert_migrations_recorded "1234"
+  dogfish migrate $db_name >/dev/null
+  assert_tables_exist "schema_migrations stuff things"
+  assert_migrations_recorded "1234 5678"
+}
+
+function test_mysql_rollback_to_version() {
+  use_mysql
+  dogfish migrate $db_name >/dev/null
+  assert_success
+  assert_tables_exist "schema_migrations stuff things"
+  assert_migrations_recorded "1234 5678"
+  dogfish rollback $db_name 5678 >/dev/null
+  assert_tables_exist "schema_migrations stuff"
+  assert_migrations_recorded "1234"
+}
+
+function test_pg_rollback_to_version() {
+  use_pg
+  dogfish migrate $db_name >/dev/null
+  assert_success
+  assert_tables_exist "schema_migrations stuff things"
+  assert_migrations_recorded "1234 5678"
+  dogfish rollback $db_name 5678 >/dev/null
+  assert_tables_exist "schema_migrations stuff"
+  assert_migrations_recorded "1234"
+}
+
+# Run all tests {{{
+
+function all_test_function_names() {
+  compgen -A function | sed -ne "s/^test_\(.\{1,\}\)$/\1/p"
+}
+
+for test_name in $(all_test_function_names); do
+  setup_test
+  run_test $test_name
+done
+
+# }}}
