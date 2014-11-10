@@ -24,6 +24,7 @@ test_template_dir=test_template
 test_dir=test_run
 db_name=dogfish_test
 db_type=
+migration_name=test_migration_name
 
 if [[ ! -f .dogfish-test-warning-given ]]; then
   echo "This test suite will destroy databases called ${db_name} in your"
@@ -71,6 +72,10 @@ function setup_test() {
   cp -R "$test_template_dir" "$test_dir"
   cd "$test_dir"
   db_type=
+}
+
+function use_migrations() {
+  mv disabled_test_migrations test_migrations
 }
 
 function use_mysql() {
@@ -175,6 +180,12 @@ function assert_pg_migrations_recorded() {
        pg_db_exec | lines_to_space_sep_words)"
 }
 
+function assert_migration_files_exist() {
+  migration_nm=$1
+  assert_equal "2" \
+    "$(ls test_migrations | grep -c -E '(migrate|rollback)-([0-9]*)-'${migration_nm}'.sql$')"
+}
+
 function run_test() {
   echo -n "Testing $1... "
   if test_$1; then
@@ -210,6 +221,22 @@ function test_action_required() {
 function test_db_name_required() {
   dogfish migrate 2>/dev/null
   assert_failure "dogfish should error on no database name given"
+}
+
+function test_create_unnamed_migration() {
+  db_type=test
+  mkdir "${db_type}_migrations"
+  DOGFISH_DB_TYPE=${db_type} dogfish create-migration >/dev/null
+  assert_success
+  assert_migration_files_exist ""
+}
+
+function test_create_named_migration() {
+  db_type=test
+  mkdir "${db_type}_migrations"
+  DOGFISH_DB_TYPE=${db_type} dogfish create-migration "${migration_name}" >/dev/null
+  assert_success
+  assert_migration_files_exist "${migration_name}"
 }
 
 function test_full_mysql_migration() {
