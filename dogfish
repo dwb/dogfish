@@ -333,7 +333,7 @@ function create_migration() {
   migration_name=$(echo ${migration_name} | tr ' ' '-')
   upfile=${migrations_dir}/migrate-${date}-${migration_name}.sql;
   downfile=${migrations_dir}/rollback-${date}-${migration_name}.sql;
-  touch ${upfile} ${downfile}
+  touch "${upfile}" "${downfile}"
   echo "Created
         ${upfile}
         ${downfile}"
