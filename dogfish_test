@@ -4,7 +4,7 @@
 # dogfish test suite
 # by Dan Brown <dan@stompydan.net>
 # https://github.com/dwb/dogfish
-# 
+#
 # Copyright (c) 2013, Dan Brown
 # This is licenced under the 3-clause BSD license. See the LICENSE file
 # supplied in this repository for the full text.
@@ -72,10 +72,6 @@ function setup_test() {
   cp -R "$test_template_dir" "$test_dir"
   cd "$test_dir"
   db_type=
-}
-
-function use_migrations() {
-  mv disabled_test_migrations test_migrations
 }
 
 function use_mysql() {
