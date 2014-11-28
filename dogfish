@@ -104,7 +104,7 @@ function detect_db_type() {
 function available_migrations_to_scripts() {
   set -e
   pushd "${migrations_dir}" >/dev/null
-  ls | sed -ne "s/^${action}-\([[:digit:]]\{1,\}\)[-a-z]*\.sql$/\1 &/p"
+  ls | sed -ne "s/^${action}-\([[:digit:]]\{1,\}\)[-a-zA-Z]*\.sql$/\1 &/p"
   popd >/dev/null
 }
 
