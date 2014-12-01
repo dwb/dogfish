@@ -177,7 +177,7 @@ function assert_pg_migrations_recorded() {
 }
 
 function assert_migration_files_exist() {
-  migration_nm=$1
+  local migration_nm=$1
   assert_equal "2" \
     "$(ls test_migrations | grep -c -E '(migrate|rollback)-([0-9]*)-'${migration_nm}'.sql$')"
 }
