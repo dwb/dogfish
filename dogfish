@@ -80,11 +80,11 @@ bq="\`" # This might look a bit silly, but vim syntax colouring messes up
 ### General functions
 
 function inform() {
-  echo $*
+  echo "$@"
 }
 
 function die() {
-  echo -e $* >&2
+  echo -e "$@" >&2
   exit 1
 }
 
@@ -164,7 +164,7 @@ function apply_migration_id() {
   else
     inform -n Rolling back $1...
   fi
-  ${db_type}_apply_migration_id $*
+  ${db_type}_apply_migration_id "$@"
   local result=$?
   [[ $result -eq 0 ]] && inform done.
   return $result
@@ -178,9 +178,9 @@ function apply_migration_id() {
 # to something that looks for lines starting "ERROR", and hide it behind a
 # function that redirects stderr (the output we actually want) back to stdout.
 function mysql_db_exec_to_stderr() {
-  mysql ${DOGFISH_MYSQL_OPTS} -BN $* $db_name  3>&1 1>&2- 2>&3- | while read line; do
+  mysql ${DOGFISH_MYSQL_OPTS} -BN "$@" $db_name  3>&1 1>&2- 2>&3- | while read line; do
     if [[ $line == ERROR\ * ]]; then
-      echo $line
+      echo "$line"
       return 1
     fi
   done
@@ -188,7 +188,7 @@ function mysql_db_exec_to_stderr() {
 }
 
 function mysql_db_exec() {
-  mysql_db_exec_to_stderr $* 2>&1
+  mysql_db_exec_to_stderr "$@" 2>&1
   return $?
 }
 
@@ -226,9 +226,9 @@ function mysql_post_apply_sql() {
 function mysql_apply_migration_id() {
   db_exec <<END
 START TRANSACTION;
-$(< ${migrations_dir}/$(available_migration_script_for_id $1))
+$(< "${migrations_dir}/$(available_migration_script_for_id "$1")")
 
-$(mysql_post_apply_sql $1) 
+$(mysql_post_apply_sql "$1") 
 COMMIT;
 END
   return $?
@@ -237,7 +237,8 @@ END
 ### PostgreSQL interface
 
 function pg_db_exec() {
-  psql ${DOGFISH_PG_OPTS} -qtA $db_name
+  psql ${DOGFISH_PG_OPTS} --no-psqlrc --single-transaction --quiet \
+    --tuples-only --no-align "$db_name"
 }
 
 function pg_create_schema_migrations_table() {
@@ -271,11 +272,9 @@ function pg_post_apply_sql() {
 
 function pg_apply_migration_id() {
   db_exec <<END
-START TRANSACTION;
-$(< ${migrations_dir}/$(available_migration_script_for_id $1))
+$(< "${migrations_dir}/$(available_migration_script_for_id "$1")")
 
-$(pg_post_apply_sql $1) 
-COMMIT;
+$(pg_post_apply_sql "$1") 
 END
   return $?
 }
@@ -322,7 +321,7 @@ function migrate() {
   [[ $action == "rollback" ]] && sort_dir="-r"
 
   for migration_id in $(migrations_to_apply | sort ${sort_dir} | truncate_migrations_if_requested); do
-    apply_migration_id $migration_id
+    apply_migration_id "$migration_id"
   done
 
   db_schema_dump > "${migrations_dir}/schema.sql"
@@ -330,7 +329,7 @@ function migrate() {
 
 function create_migration() {
   date=$(date +%Y%m%d%H%M%S)
-  migration_name=$(echo ${migration_name} | tr ' ' '-')
+  migration_name=$(echo "${migration_name}" | tr ' ' '-')
   upfile=${migrations_dir}/migrate-${date}-${migration_name}.sql;
   downfile=${migrations_dir}/rollback-${date}-${migration_name}.sql;
   touch "${upfile}" "${downfile}"
