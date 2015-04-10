@@ -28,13 +28,17 @@ dogfish v${VERSION}
 by Dan Brown <dan@stompydan.net>
 https://github.com/dwb/dogfish
 
-usage: dogfish migrate|rollback db_name [finish_at_migration]
-       dogfish create-migration [migration_name]
+usage: dogfish migrate|rollback DB_NAME [FINISH_AT_MIGRATION]
+       dogfish remigrate DB_NAME
+       dogfish create-migration [MIGRATION_NAME]
 
 where db_name is the name of the database in MySQL or PostgreSQL
       finish_at_migration is the (optional) number of the migration to finish
-                          processing after
+          processing after
       migration_name is an optional description of the migration
+
+'remigrate' rolls back and re-applies the last migration. Useful for
+development.
 
 The database server you are using is auto-detected if you name your migrations
 directory "mysql_migrations", "postgres_migrations" or "pg_migrations". You can
@@ -64,7 +68,7 @@ END
 esac
 
 action=${1-}; shift || true
-if [[ $action == "migrate" || $action == "rollback" ]]; then
+if [[ $action == "migrate" || $action == "rollback" || $action == "remigrate" ]]; then
   db_name=${1-}; shift || true
   finish_at_version=${1-}; shift || true
 elif [[ $action == "create-migration" ]]; then
@@ -285,10 +289,11 @@ if [[ -z $action ]]; then
   die "Action not given. Use one of:\n
   dogfish migrate\n
   dogfish rollback\n
+  dogfish remigrate\n
   dogfish create-migration"
 fi
 
-if [[ $action == "migrate" || $action == "rollback" ]]; then
+if [[ $action == "migrate" || $action == "rollback" || $action == "remigrate" ]]; then
   if [[ -z $db_name ]]; then
     die "Database name not given"
   fi
@@ -311,6 +316,8 @@ fi
 ### Let's actually do some stuff
 
 function migrate() {
+  local direction=$1
+  action=$1  # FIXME: refactor out the nasty global!
   create_schema_migrations_table
 
   if [[ -n $finish_at_version ]] && ! migrations_to_apply | grep -q "^${finish_at_version}\$"; then
@@ -318,7 +325,7 @@ function migrate() {
   fi
 
   sort_dir=""
-  [[ $action == "rollback" ]] && sort_dir="-r"
+  [[ $direction == "rollback" ]] && sort_dir="-r"
 
   for migration_id in $(migrations_to_apply | sort ${sort_dir} | truncate_migrations_if_requested); do
     apply_migration_id "$migration_id"
@@ -338,8 +345,11 @@ function create_migration() {
         ${downfile}"
 }
 
-if [[ $action == "migrate" || $action == "rollback" ]]; then
-  migrate
+if [[ $action == "remigrate" ]]; then
+  migrate rollback
+  migrate migrate
+elif [[ $action == "migrate" || $action == "rollback" ]]; then
+  migrate "$action"
 elif [[ $action == "create-migration" ]]; then
   create_migration
 fi
