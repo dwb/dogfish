@@ -38,17 +38,19 @@ fi
 # }}}
 # General helpers {{{
 
+PSQL="psql --no-psqlrc --quiet --tuples-only --no-align"
+
 function dogfish() {
-  ./dogfish $*
+  ./dogfish "$@"
   return $?
 }
 
 function inform() {
-  echo $*
+  echo "$@"
 }
 
 function die() {
-  echo -e $* >&2
+  echo -e "$@" >&2
   exit 1
 }
 
@@ -86,7 +88,7 @@ function use_mysql() {
 }
 
 function mysql_db_exec_to_stderr() {
-  mysql ${DOGFISH_MYSQL_OPTS} -BN $* $db_name  3>&1 1>&2- 2>&3- | while read line; do
+  mysql ${DOGFISH_MYSQL_OPTS} -BN "$@" $db_name  3>&1 1>&2- 2>&3- | while read line; do
     if [[ $line == ERROR\ * ]]; then
       fail "$line"
       return $?
@@ -96,13 +98,13 @@ function mysql_db_exec_to_stderr() {
 }
 
 function mysql_db_exec() {
-  mysql_db_exec_to_stderr $* 2>&1
+  mysql_db_exec_to_stderr "$@" 2>&1
   return $?
 }
 
 function use_pg() {
   mv disabled_pg_migrations pg_migrations
-  psql -q ${DOGFISH_PG_OPTS} <<END
+  $PSQL -q ${DOGFISH_PG_OPTS} <<END
   DROP DATABASE IF EXISTS $db_name;
   CREATE DATABASE $db_name;
 END
@@ -111,7 +113,7 @@ END
 }
 
 function pg_db_exec() {
-  psql ${DOGFISH_PG_OPTS} -qtA $db_name $*
+  $PSQL ${DOGFISH_PG_OPTS} -qtA $db_name "$@"
   return $?
 }
 
