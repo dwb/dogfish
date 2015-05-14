@@ -243,6 +243,7 @@ END
 function pg_db_exec() {
   psql ${DOGFISH_PG_OPTS} --no-psqlrc --single-transaction --quiet \
     --tuples-only --no-align "$db_name"
+  return $?
 }
 
 function pg_create_schema_migrations_table() {
