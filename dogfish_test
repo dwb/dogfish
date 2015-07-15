@@ -276,17 +276,19 @@ function test_empty_pg_migration_creates_schema_migrations_table() {
 function test_mysql_rollback() {
   use_mysql
   dogfish migrate $db_name >/dev/null
+  assert_tables_exist "schema_migrations stuff things"
   dogfish rollback $db_name >/dev/null
-  assert_tables_exist "schema_migrations"
-  assert_migrations_recorded ""
+  assert_tables_exist "schema_migrations stuff"
+  assert_migrations_recorded "1234"
 }
 
 function test_pg_rollback() {
   use_pg
   dogfish migrate $db_name >/dev/null
+  assert_tables_exist "schema_migrations stuff things"
   dogfish rollback $db_name >/dev/null
-  assert_tables_exist "schema_migrations"
-  assert_migrations_recorded ""
+  assert_tables_exist "schema_migrations stuff"
+  assert_migrations_recorded "1234"
 }
 
 function test_mysql_migrate_to_version() {

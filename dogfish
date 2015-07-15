@@ -325,11 +325,18 @@ function migrate() {
     die "Migration ${finish_at_version} would not have been reached"
   fi
 
-  sort_dir=""
-  [[ $direction == "rollback" ]] && sort_dir="-r"
+  local sort_dir=""
+  local rolling_back="false"
+  if [[ $direction == "rollback" ]]; then
+    sort_dir="-r"
+    rolling_back="true"
+  fi
 
   for migration_id in $(migrations_to_apply | sort ${sort_dir} | truncate_migrations_if_requested); do
     apply_migration_id "$migration_id"
+    # Only roll back the most recent migration.
+    # TODO: make rolling back number of migrations configurable
+    $rolling_back && break
   done
 
   db_schema_dump > "${migrations_dir}/schema.sql"
