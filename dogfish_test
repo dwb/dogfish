@@ -17,7 +17,7 @@ DOGFISH_PG_OPTS=$DOGFISH_PG_OPTS
 set -e
 set -o nounset
 
-cd $(dirname $0)
+cd "$(dirname "$0")"
 root_dir=$(pwd)
 
 test_template_dir=test_template
@@ -181,12 +181,13 @@ function assert_pg_migrations_recorded() {
 function assert_migration_files_exist() {
   local migration_nm=$1
   assert_equal "2" \
-    "$(ls test_migrations | grep -c -E '(migrate|rollback)-([0-9]*)-'${migration_nm}'.sql$')"
+    "$(find test_migrations \( -name 'migrate-*' -or -name 'rollback-*' \) \
+         -and -name "*-${migration_nm}.sql" | wc -l | sed -e 's/^ *//')"
 }
 
 function run_test() {
   echo -n "Testing $1... "
-  if test_$1; then
+  if "test_$1"; then
     pass
   else
     exit 1
@@ -199,7 +200,8 @@ function run_test() {
 
 function test_version() {
   for flag in -v --version; do
-    assert_equal 1 $(dogfish $flag | wc -l) "version not returned"
+    assert_equal 1 "$(dogfish $flag | wc -l | sed -e 's/^ *//')" \
+      "version not returned"
   done
 }
 
@@ -343,7 +345,7 @@ function all_test_function_names() {
 
 for test_name in $(all_test_function_names); do
   setup_test
-  run_test $test_name
+  run_test "$test_name"
 done
 
 # }}}
