@@ -245,7 +245,7 @@ END
 
 function pg_db_exec() {
   psql ${DOGFISH_PG_OPTS} --no-psqlrc --single-transaction --quiet \
-    --tuples-only --no-align "$db_name"
+    --tuples-only --no-align --no-password "$db_name"
   return $?
 }
 
@@ -258,7 +258,7 @@ END
 }
 
 function pg_db_schema_dump() {
-  pg_dump ${DOGFISH_PG_OPTS} --schema-only --no-acl --no-owner "${db_name}"
+  pg_dump ${DOGFISH_PG_OPTS} --schema-only --no-acl --no-owner --no-password "${db_name}"
 }
 
 function pg_applied_migrations() {
