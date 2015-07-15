@@ -113,6 +113,9 @@ function detect_db_type() {
 function available_migrations_to_scripts() {
   set -e
   pushd "${migrations_dir}" >/dev/null
+  # TODO: work out how to not use `ls` here: won't deal with newlines in
+  # file names and all that classic stuff. But then the regex will filter
+  # out any weirdness, so not that bad.
   ls | sed -ne "s/^${action}-\([[:digit:]]\{1,\}\)[-a-zA-Z]*\.sql$/\1 &/p"
   popd >/dev/null
 }
