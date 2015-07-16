@@ -1,11 +1,8 @@
 language: bash
 
-addons:
-  apt:
-    packages:
-      - postgresql-9.4
-      - mysql-server-5.5
-      - mysql-client-5.5
+services:
+  - mysql
+  - postgresql
 
 before_script:
   - mysql -e "CREATE DATABASE dogfish_test;"
