@@ -349,6 +349,50 @@ function test_pg_rollback_to_version() {
   assert_migrations_recorded "1234"
 }
 
+function test_mysql_schema_load() {
+  use_mysql
+  dogfish load-schema $db_name >/dev/null
+  assert_success
+  assert_tables_exist "schema_migrations stuff things"
+  assert_migrations_recorded "1234 5678"
+}
+
+function test_pg_schema_load() {
+  use_pg
+  dogfish load-schema $db_name >/dev/null
+  assert_success
+  assert_tables_exist "schema_migrations stuff things"
+  assert_migrations_recorded "1234 5678"
+}
+
+function test_mysql_schema_dump() {
+  use_mysql
+  local schema_file=mysql_migrations/schema.sql
+  dogfish load-schema $db_name >/dev/null
+  assert_success
+  rm "${schema_file}"
+  dogfish dump-schema $db_name >/dev/null
+  assert_success
+  [[ -r $schema_file ]]
+  assert_success "Expected schema.sql to be created"
+  [[ $(stat -f %z "${schema_file}") -gt 0 ]]
+  assert_success "Expected schema.sql to be non-empty"
+}
+
+function test_pg_schema_load() {
+  use_pg
+  local schema_file=pg_migrations/schema.sql
+  dogfish load-schema $db_name >/dev/null
+  assert_success
+  rm "$schema_file"
+  dogfish dump-schema $db_name >/dev/null
+  assert_success
+  [[ -r $schema_file ]]
+  assert_success "Expected schema.sql to be created"
+  [[ $(stat -f %z "${schema_file}") -gt 0 ]]
+  assert_success "Expected schema.sql to be non-empty"
+}
+
 # Run all tests {{{
 
 function all_test_function_names() {

@@ -68,12 +68,19 @@ END
 esac
 
 action=${1-}; shift || true
-if [[ $action == "migrate" || $action == "rollback" || $action == "remigrate" ]]; then
-  db_name=${1-}; shift || true
-  finish_at_version=${1-}; shift || true
-elif [[ $action == "create-migration" ]]; then
-  migration_name=${1-}; shift || true
-fi
+case $action in
+  migrate|rollback|remigrate)
+    db_name=${1-}; shift || true
+    finish_at_version=${1-}; shift || true
+    ;;
+  dump-schema|load-schema)
+    db_name=${1-}; shift || true
+    ;;
+  create-migration)
+    migration_name=${1-}; shift || true
+    ;;
+esac
+
 db_type=${DOGFISH_DB_TYPE:-}
 schema_migrations_table=schema_migrations
 migration_id_column=migration_id
@@ -211,9 +218,13 @@ END
 }
 
 function mysql_db_schema_dump() {
-  mysqldump "${DOGFISH_MYSQL_OPTS[@]:+${DOGFISH_MYSQL_OPTS[@]}}" --comments --no-data --routines --triggers \
-    --tz-utc --add-drop-table --add-locks --create-options --set-charset \
+  echo -e "-- dogfish schema dump\n\n"
+  mysqldump "${DOGFISH_MYSQL_OPTS[@]:+${DOGFISH_MYSQL_OPTS[@]}}" --comments --no-data --routines --triggers --tz-utc --skip-add-drop-table \
+    --add-locks --create-options --set-charset \
     "${db_name}"
+  echo -e "\n\n-- Schema dump done. Now dumping migration tracking table:\n\n"
+  mysqldump "${DOGFISH_MYSQL_OPTS[@]:+${DOGFISH_MYSQL_OPTS[@]}}" --comments --no-create-info --skip-triggers --tz-utc \
+    "${db_name}" "${schema_migrations_table}"
 }
 
 function mysql_applied_migrations() {
@@ -261,7 +272,10 @@ END
 }
 
 function pg_db_schema_dump() {
+  echo -e "-- dogfish schema dump\n\n"
   pg_dump "${DOGFISH_PG_OPTS[@]:+${DOGFISH_PG_OPTS[@]}}" --schema-only --no-acl --no-owner --no-password "${db_name}"
+  echo -e "\n\n-- Schema dump done. Now dumping migration tracking table:\n\n"
+  pg_dump "${DOGFISH_PG_OPTS[@]:+${DOGFISH_PG_OPTS[@]}}" --data-only --table="${schema_migrations_table}" --no-acl --no-owner --no-password "${db_name}"
 }
 
 function pg_applied_migrations() {
@@ -320,6 +334,8 @@ if ! [[ -d ${migrations_dir} ]]; then
   die "Migrations directory ${migrations_dir} not found"
 fi
 
+schema_file="${migrations_dir}/schema.sql"
+
 ### Let's actually do some stuff
 
 function migrate() {
@@ -345,7 +361,7 @@ function migrate() {
     $rolling_back && break
   done
 
-  db_schema_dump > "${migrations_dir}/schema.sql"
+  dump_schema
 }
 
 function create_migration() {
@@ -359,11 +375,32 @@ function create_migration() {
         ${downfile}"
 }
 
-if [[ $action == "remigrate" ]]; then
-  migrate rollback
-  migrate migrate
-elif [[ $action == "migrate" || $action == "rollback" ]]; then
-  migrate "$action"
-elif [[ $action == "create-migration" ]]; then
-  create_migration
-fi
+function load_schema() {
+  if ! [[ -r $schema_file ]]; then
+    die "Couldn't read schema at $schema_file"
+  fi
+  db_exec < "${schema_file}"
+}
+
+function dump_schema() {
+  db_schema_dump > "${schema_file}"
+}
+
+case $action in
+  remigrate)
+    migrate rollback
+    migrate migrate
+    ;;
+  migrate|rollback)
+    migrate "$action"
+    ;;
+  create-migration)
+    create_migration
+    ;;
+  dump-schema)
+    dump_schema
+    ;;
+  load-schema)
+    load_schema
+    ;;
+esac
