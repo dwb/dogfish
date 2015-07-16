@@ -10,3 +10,6 @@ before_script:
   - touch .dogfish-test-warning-given
 
 script: ./dogfish_test
+
+env:
+  - PGDATABASE=dogfish_test
