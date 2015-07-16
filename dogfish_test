@@ -11,9 +11,6 @@
 
 # Setup {{{
 
-DOGFISH_MYSQL_OPTS=$DOGFISH_MYSQL_OPTS
-DOGFISH_PG_OPTS=$DOGFISH_PG_OPTS
-
 set -e
 set -o nounset
 
@@ -38,7 +35,16 @@ fi
 # }}}
 # General helpers {{{
 
-PSQL="psql --no-psqlrc --quiet --tuples-only --no-align"
+DOGFISH_MYSQL_OPTS=( ${DOGFISH_MYSQL_OPTS:-} )
+DOGFISH_PG_OPTS=( ${DOGFISH_PG_OPTS:-} )
+
+function dogfish_mysql() {
+  mysql -BN "${DOGFISH_MYSQL_OPTS[@]:+${DOGFISH_MYSQL_OPTS[@]}}" "$@"
+}
+
+function dogfish_psql() {
+  psql --no-psqlrc --quiet --tuples-only --no-align "${DOGFISH_PG_OPTS[@]:+${DOGFISH_PG_OPTS[@]}}" "$@"
+}
 
 function dogfish() {
   ./dogfish "$@"
@@ -78,7 +84,7 @@ function setup_test() {
 
 function use_mysql() {
   mv disabled_mysql_migrations mysql_migrations
-  mysql ${DOGFISH_MYSQL_OPTS} -e "DROP DATABASE IF EXISTS $db_name; CREATE DATABASE $db_name;" 2>&1 | while read line; do
+  dogfish_mysql -e "DROP DATABASE IF EXISTS $db_name; CREATE DATABASE $db_name;" 2>&1 | while read line; do
     if [[ $line == ERROR* ]]; then
       fail "$line"
     fi
@@ -88,7 +94,8 @@ function use_mysql() {
 }
 
 function mysql_db_exec_to_stderr() {
-  mysql ${DOGFISH_MYSQL_OPTS} -BN "$@" $db_name  3>&1 1>&2- 2>&3- | while read line; do
+  # shellcheck disable=SC2119
+  dogfish_mysql $db_name  3>&1 1>&2- 2>&3- | while read line; do
     if [[ $line == ERROR\ * ]]; then
       fail "$line"
       return $?
@@ -98,13 +105,14 @@ function mysql_db_exec_to_stderr() {
 }
 
 function mysql_db_exec() {
-  mysql_db_exec_to_stderr "$@" 2>&1
+  # shellcheck disable=SC2119
+  mysql_db_exec_to_stderr 2>&1
   return $?
 }
 
 function use_pg() {
   mv disabled_pg_migrations pg_migrations
-  $PSQL -q ${DOGFISH_PG_OPTS} <<END
+  dogfish_psql -q <<END
   DROP DATABASE IF EXISTS $db_name;
   CREATE DATABASE $db_name;
 END
@@ -113,7 +121,7 @@ END
 }
 
 function pg_db_exec() {
-  $PSQL ${DOGFISH_PG_OPTS} -qtA $db_name "$@"
+  dogfish_psql -qtA "$db_name"
   return $?
 }
 
@@ -125,7 +133,7 @@ function lines_to_space_sep_words() {
 # Assertions {{{
 
 function assert_equal() {
-  if [[ $1 != $2 ]]; then
+  if [[ $1 != "$2" ]]; then
     if [[ -n ${3:-} ]]; then
       local msg=$3
     else
@@ -153,11 +161,13 @@ function assert_tables_exist() {
 }
 
 function assert_mysql_tables_exist() {
+  # shellcheck disable=SC2119
   assert_equal "$1" \
     "$(echo "SHOW TABLES;" | mysql_db_exec | lines_to_space_sep_words)"
 }
 
 function assert_pg_tables_exist() {
+  # shellcheck disable=SC2119
   assert_equal "$1" \
     "$(echo "\dt" | pg_db_exec | cut -d \| -f 2 | lines_to_space_sep_words)"
 }
@@ -167,12 +177,14 @@ function assert_migrations_recorded() {
 }
 
 function assert_mysql_migrations_recorded() {
+  # shellcheck disable=SC2119
   assert_equal "$1" \
     "$(echo "SELECT * FROM schema_migrations ORDER BY migration_id ASC" | \
        mysql_db_exec | lines_to_space_sep_words)"
 }
 
 function assert_pg_migrations_recorded() {
+  # shellcheck disable=SC2119
   assert_equal "$1" \
     "$(echo "SELECT * FROM schema_migrations ORDER BY migration_id ASC" | \
        pg_db_exec | lines_to_space_sep_words)"
@@ -260,7 +272,7 @@ function test_full_pg_migration() {
 function test_empty_mysql_migration_creates_schema_migrations_table() {
   use_mysql
   assert_tables_exist ""
-  rm ${db_type}_migrations/*.sql
+  rm "${db_type}_migrations/"*.sql
   dogfish migrate $db_name >/dev/null
   assert_tables_exist "schema_migrations"
   assert_migrations_recorded ""

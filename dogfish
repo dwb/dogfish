@@ -13,8 +13,8 @@
 
 VERSION='1.1.0'
 
-DOGFISH_MYSQL_OPTS=$DOGFISH_MYSQL_OPTS
-DOGFISH_PG_OPTS=$DOGFISH_PG_OPTS
+DOGFISH_MYSQL_OPTS=( $DOGFISH_MYSQL_OPTS )
+DOGFISH_PG_OPTS=( $DOGFISH_PG_OPTS )
 
 set -e # Stop on error
 set -o nounset # Error on using unset vars
@@ -116,6 +116,9 @@ function available_migrations_to_scripts() {
   # TODO: work out how to not use `ls` here: won't deal with newlines in
   # file names and all that classic stuff. But then the regex will filter
   # out any weirdness, so not that bad.
+  #
+  # Quieten shellcheck for this one, we know about it:
+  # shellcheck disable=SC2012
   ls | sed -ne "s/^${action}-\([[:digit:]]\{1,\}\)[-a-zA-Z]*\.sql$/\1 &/p"
   popd >/dev/null
 }
@@ -167,9 +170,9 @@ function applied_migrations() {
 
 function apply_migration_id() {
   if [[ $action == "migrate" ]]; then
-    inform -n Migrating to $1...
+    inform -n Migrating to "$1..."
   else
-    inform -n Rolling back $1...
+    inform -n Rolling back "$1..."
   fi
   ${db_type}_apply_migration_id "$@"
   local result=$?
@@ -185,7 +188,7 @@ function apply_migration_id() {
 # to something that looks for lines starting "ERROR", and hide it behind a
 # function that redirects stderr (the output we actually want) back to stdout.
 function mysql_db_exec_to_stderr() {
-  mysql ${DOGFISH_MYSQL_OPTS} -BN "$@" $db_name  3>&1 1>&2- 2>&3- | while read line; do
+  mysql "${DOGFISH_MYSQL_OPTS[@]:+${DOGFISH_MYSQL_OPTS[@]}}" -BN "$@" "$db_name"  3>&1 1>&2- 2>&3- | while read line; do
     if [[ $line == ERROR\ * ]]; then
       echo "$line"
       return 1
@@ -208,7 +211,7 @@ END
 }
 
 function mysql_db_schema_dump() {
-  mysqldump ${DOGFISH_MYSQL_OPTS} --comments --no-data --routines --triggers \
+  mysqldump "${DOGFISH_MYSQL_OPTS[@]:+${DOGFISH_MYSQL_OPTS[@]}}" --comments --no-data --routines --triggers \
     --tz-utc --add-drop-table --add-locks --create-options --set-charset \
     "${db_name}"
 }
@@ -244,7 +247,7 @@ END
 ### PostgreSQL interface
 
 function pg_db_exec() {
-  psql ${DOGFISH_PG_OPTS} --no-psqlrc --single-transaction --quiet \
+  psql "${DOGFISH_PG_OPTS[@]:+${DOGFISH_PG_OPTS[@]}}" --no-psqlrc --single-transaction --quiet \
     --tuples-only --no-align --no-password "$db_name"
   return $?
 }
@@ -258,7 +261,7 @@ END
 }
 
 function pg_db_schema_dump() {
-  pg_dump ${DOGFISH_PG_OPTS} --schema-only --no-acl --no-owner --no-password "${db_name}"
+  pg_dump "${DOGFISH_PG_OPTS[@]:+${DOGFISH_PG_OPTS[@]}}" --schema-only --no-acl --no-owner --no-password "${db_name}"
 }
 
 function pg_applied_migrations() {
@@ -364,4 +367,3 @@ elif [[ $action == "migrate" || $action == "rollback" ]]; then
 elif [[ $action == "create-migration" ]]; then
   create_migration
 fi
-
