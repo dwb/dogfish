@@ -10,5 +10,6 @@ addons:
 before_script:
   - mysql -e "CREATE DATABASE dogfish_test;"
   - createdb dogfish_test
+  - touch .dogfish-test-warning-given
 
 script: ./dogfish_test
