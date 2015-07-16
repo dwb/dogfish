@@ -23,7 +23,7 @@ export PGOPTIONS='--client-min-messages=warning' # hush up psql NOTICEs
 
 case ${1-} in
   "-h" | "--help")
-    exec more -e - <<END
+    while read line; do echo "$line"; done <<END
 dogfish v${VERSION}
 by Dan Brown <dan@stompydan.net>
 https://github.com/dwb/dogfish
