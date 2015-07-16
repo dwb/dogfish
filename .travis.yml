@@ -6,10 +6,8 @@ services:
 
 before_script:
   - mysql -e "CREATE DATABASE dogfish_test;"
+  - createdb travis
   - createdb dogfish_test
   - touch .dogfish-test-warning-given
 
 script: ./dogfish_test
-
-env:
-  - PGDATABASE=dogfish_test
