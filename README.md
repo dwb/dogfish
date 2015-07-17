@@ -4,6 +4,8 @@ by Dan Brown <dan@stompydan.net>
 
 A really simple migration manager for MySQL and PostgreSQL.
 
+[![Build Status](https://travis-ci.org/dwb/dogfish.svg?branch=master)](https://travis-ci.org/dwb/dogfish)
+
 Every database migration manager I found assumed quite a few things. They were all written in a Proper Language, had some kind of fancy abstraction layer, or otherwise got in my way. I want to write migrations in the native SQL of the database system I'm using, and I don't want to be tied to a language or runtime to do it. I've gone back to pretty much the lowest common denominator with dogfish: bash and POSIX tools. That's the intention, anyway: non-POSIXisms (apart from bash, mysql, and psql of course) should be considered bugs. If someone wants to make it water-tight Bourne shell, be my guest, but I thought bash was pretty safe.
 
 You put your `.sql` migration (and optionally rollback) scripts in a directory, and dogfish will work out what needs to be migrated, based on what previously-run migrations have been recorded in the database. If you want to rollback, you can do that. If you only want to migrate or rollback to a specific version, that is catered for too. You may be thinking about now that this has been heavily influenced by Rails' migration system, and you'd be quite right.
