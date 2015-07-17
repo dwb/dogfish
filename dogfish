@@ -275,7 +275,7 @@ function pg_db_schema_dump() {
   echo -e "-- dogfish schema dump\n\n"
   pg_dump "${DOGFISH_PG_OPTS[@]:+${DOGFISH_PG_OPTS[@]}}" --schema-only --no-acl --no-owner --no-password "${db_name}"
   echo -e "\n\n-- Schema dump done. Now dumping migration tracking table:\n\n"
-  pg_dump "${DOGFISH_PG_OPTS[@]:+${DOGFISH_PG_OPTS[@]}}" --data-only --table="${schema_migrations_table}" --no-acl --no-owner --no-password "${db_name}"
+  pg_dump "${DOGFISH_PG_OPTS[@]:+${DOGFISH_PG_OPTS[@]}}" --data-only --table="${schema_migrations_table}" --inserts --no-acl --no-owner --no-password "${db_name}"
 }
 
 function pg_applied_migrations() {

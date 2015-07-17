@@ -111,10 +111,8 @@ SET search_path = public, pg_catalog;
 -- Data for Name: schema_migrations; Type: TABLE DATA; Schema: public; Owner: -
 --
 
-COPY schema_migrations (migration_id) FROM stdin;
-1234
-5678
-\.
+INSERT INTO schema_migrations VALUES ('1234');
+INSERT INTO schema_migrations VALUES ('5678');
 
 
 --

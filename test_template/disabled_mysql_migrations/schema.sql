@@ -22,7 +22,6 @@
 -- Table structure for table `schema_migrations`
 --
 
-DROP TABLE IF EXISTS `schema_migrations`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `schema_migrations` (
@@ -35,7 +34,6 @@ CREATE TABLE `schema_migrations` (
 -- Table structure for table `stuff`
 --
 
-DROP TABLE IF EXISTS `stuff`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `stuff` (
@@ -49,7 +47,6 @@ CREATE TABLE `stuff` (
 -- Table structure for table `things`
 --
 
-DROP TABLE IF EXISTS `things`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `things` (
@@ -72,7 +69,7 @@ CREATE TABLE `things` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2015-07-16 12:35:40
+-- Dump completed on 2015-07-17 14:53:00
 
 
 -- Schema dump done. Now dumping migration tracking table:
@@ -114,4 +111,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2015-07-16 12:35:40
+-- Dump completed on 2015-07-17 14:53:00
