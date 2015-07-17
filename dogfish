@@ -60,6 +60,7 @@ about, look in the test_template directory for some good clues.
 A dump of just the schema will be made in the migrations directory, under
 the convenient name "schema.sql".
 END
+    exit
     ;;
   "-v" | "--version")
     echo $VERSION
