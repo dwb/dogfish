@@ -11,7 +11,7 @@
 # This is licenced under the 3-clause BSD license. See the LICENSE file
 # supplied in this repository for the full text.
 
-VERSION='1.1.0'
+VERSION='1.2.0'
 
 DOGFISH_MYSQL_OPTS=( $DOGFISH_MYSQL_OPTS )
 DOGFISH_PG_OPTS=( $DOGFISH_PG_OPTS )
