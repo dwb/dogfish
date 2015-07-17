@@ -375,7 +375,7 @@ function test_mysql_schema_dump() {
   assert_success
   [[ -r $schema_file ]]
   assert_success "Expected schema.sql to be created"
-  [[ $(stat -f %z "${schema_file}") -gt 0 ]]
+  [[ $(wc -c "${schema_file}" | awk '{print $1}') -gt 0 ]]
   assert_success "Expected schema.sql to be non-empty"
 }
 
@@ -389,7 +389,7 @@ function test_pg_schema_load() {
   assert_success
   [[ -r $schema_file ]]
   assert_success "Expected schema.sql to be created"
-  [[ $(stat -f %z "${schema_file}") -gt 0 ]]
+  [[ $(wc -c "${schema_file}" | awk '{print $1}') -gt 0 ]]
   assert_success "Expected schema.sql to be non-empty"
 }
 
