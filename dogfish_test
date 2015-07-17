@@ -393,6 +393,24 @@ function test_pg_schema_load() {
   assert_success "Expected schema.sql to be non-empty"
 }
 
+# Run shellcheck
+
+shellcheck=shellcheck
+if ! command -v "$shellcheck" >/dev/null; then
+  if ! [[ -x ./shellcheck ]] && [[ -f ./shellcheck ]]; then
+    shellcheck="shellcheck-zbin/shellcheck-$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m).gz"
+    if ! [[ -f $shellcheck ]]; then
+      echo "Shellcheck not found and there isn't a binary for $(uname -sm)"
+      echo "in this repository. Please install it:"
+      die "\`brew install shellcheck\` on OS X or visit http://shellcheck.net"
+    fi
+    gunzip "$shellcheck" > ./shellcheck
+  fi
+  shellcheck="./shellcheck"
+fi
+
+"$shellcheck" dogfish "$0"
+
 # Run all tests {{{
 
 function all_test_function_names() {
