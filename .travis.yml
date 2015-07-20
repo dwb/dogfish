@@ -1,5 +1,7 @@
 language: bash
 
+sudo: false # Use container-based Travis infrastructure
+
 services:
   - mysql
   - postgresql
