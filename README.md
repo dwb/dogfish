@@ -16,7 +16,7 @@ Tested with bash 3.2.48, MySQL 5.5.28, and PostgreSQL 9.2.2, but I don't think I
 
 At the moment, it is slightly deficient in configuration (it assumes certain names for the schema migrations table and its column), but that would not be a hard problem to solve. It's also mildly inefficient (it scans the migrations directory many times), but it seems to run fast enough for me to not worry all that much.
 
-Contributions welcome; do the usual fork/branch/pull-request dance. There is a test suite: just have a working MySQL and PostgreSQL that dogfish would be able to access, make sure there's nothing you want to keep in any `dogfish_test` database that might exist, and run `./dogfish_test`. Green words will hopefully fly by. Please: 80 columns, POSIX tools and usages only.
+Contributions welcome; do the usual fork/branch/pull-request dance. There is a test suite: just have a working MySQL and PostgreSQL that dogfish would be able to access, make sure there's nothing you want to keep in any `dogfish_test` database that might exist, and run `./dogfish_test`. Green words will hopefully fly by. Please: 80 columns, POSIX tools and usages only. Note that you need to install [Shellcheck](http://shellcheck.net), or be running on Linux where I have helpfully included a binary for you (and Travis). It's available in Homebrew on OS X.
 
 The spiny dogfish, _Squalus acanthias_, is one of the few animals that migrate
 that someone hasn't used as a name for a piece of software yet. I'm not a
