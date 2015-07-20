@@ -404,7 +404,7 @@ if ! command -v "$shellcheck" >/dev/null; then
       echo "in this repository. Please install it:"
       die "\`brew install shellcheck\` on OS X or visit http://shellcheck.net"
     fi
-    gunzip -ck "$shellcheck" > ./shellcheck
+    gunzip -c "$shellcheck" > ./shellcheck
     chmod a+x ./shellcheck
   fi
   shellcheck="./shellcheck"
