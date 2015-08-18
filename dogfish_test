@@ -269,6 +269,32 @@ function test_full_pg_migration() {
   assert_migrations_recorded "1234 5678"
 }
 
+function test_full_mysql_migration_read_only() {
+  local schema_file=mysql_migrations/schema.sql
+  use_mysql
+  rm "${schema_file}"
+  assert_tables_exist ""
+  dogfish -r migrate $db_name >/dev/null
+  assert_success
+  assert_tables_exist "schema_migrations stuff things"
+  assert_migrations_recorded "1234 5678"
+  [[ -f $schema_file ]]
+  assert_failure "schema.sql file written to"
+}
+
+function test_full_pg_migration_read_only() {
+  local schema_file=pg_migrations/schema.sql
+  use_pg
+  rm "${schema_file}"
+  assert_tables_exist ""
+  dogfish -r migrate $db_name >/dev/null
+  assert_success
+  assert_tables_exist "schema_migrations stuff things"
+  assert_migrations_recorded "1234 5678"
+  [[ -f $schema_file ]]
+  assert_failure "schema.sql file written to"
+}
+
 function test_empty_mysql_migration_creates_schema_migrations_table() {
   use_mysql
   assert_tables_exist ""
@@ -377,6 +403,18 @@ function test_mysql_schema_dump() {
   assert_success "Expected schema.sql to be created"
   [[ $(wc -c "${schema_file}" | awk '{print $1}') -gt 0 ]]
   assert_success "Expected schema.sql to be non-empty"
+}
+
+function test_schema_dump_fails_read_only_mode() {
+  use_mysql
+  local schema_file=mysql_migrations/schema.sql
+  dogfish load-schema $db_name >/dev/null
+  assert_success
+  rm "${schema_file}"
+  dogfish -r dump-schema $db_name >/dev/null 2>&1
+  assert_failure "could dump-schema in read-only mode with option -r"
+  dogfish --read-only dump-schema $db_name >/dev/null 2>&1
+  assert_failure "could dump-schema in read-only mode with option --read-only"
 }
 
 function test_pg_schema_load() {

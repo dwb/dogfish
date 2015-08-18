@@ -21,9 +21,17 @@ set -o nounset # Error on using unset vars
 export LS_OPTIONS=
 export PGOPTIONS='--client-min-messages=warning' # hush up psql NOTICEs
 
-case ${1-} in
-  "-h" | "--help")
-    while read line; do echo "$line"; done <<END
+function die() {
+  echo -e "$@" >&2
+  exit 1
+}
+
+READ_ONLY=""
+
+while true; do
+  case ${1-} in
+    "-h" | "--help")
+      while read line; do printf '%s\n' "$line"; done <<END
 dogfish v${VERSION}
 by Dan Brown <dan@stompydan.net>
 https://github.com/dwb/dogfish
@@ -60,13 +68,24 @@ about, look in the test_template directory for some good clues.
 A dump of just the schema will be made in the migrations directory, under
 the convenient name "schema.sql".
 END
-    exit
-    ;;
-  "-v" | "--version")
-    echo $VERSION
-    exit
-    ;;
-esac
+      exit
+      ;;
+    "-v" | "--version")
+      echo $VERSION
+      exit
+      ;;
+    "-r" | "--read-only")
+      READ_ONLY="1"
+      shift
+      ;;
+    -*)
+      die "unrecognised option '$1'"
+      ;;
+    *)
+      break 2
+      ;;
+  esac
+done
 
 action=${1-}; shift || true
 case $action in
@@ -93,11 +112,6 @@ bq="\`" # This might look a bit silly, but vim syntax colouring messes up
 
 function inform() {
   echo "$@"
-}
-
-function die() {
-  echo -e "$@" >&2
-  exit 1
 }
 
 function find_dir_by_pattern() {
@@ -384,7 +398,11 @@ function load_schema() {
 }
 
 function dump_schema() {
-  db_schema_dump > "${schema_file}"
+  if [[ -z $READ_ONLY ]]; then
+    db_schema_dump > "${schema_file}"
+  else
+    inform "skipping schema dump in read-only mode"
+  fi
 }
 
 case $action in
@@ -399,6 +417,9 @@ case $action in
     create_migration
     ;;
   dump-schema)
+    if [[ -n $READ_ONLY ]]; then
+      die "can't dump schema in read-only mode"
+    fi
     dump_schema
     ;;
   load-schema)
