@@ -141,7 +141,7 @@ function available_migrations_to_scripts() {
   #
   # Quieten shellcheck for this one, we know about it:
   # shellcheck disable=SC2012
-  ls | sed -ne "s/^${action}-\([[:digit:]]\{1,\}\)[-a-zA-Z]*\.sql$/\1 &/p"
+  ls |sed -ne "s/^${action}[-_]\([[:digit:]]\{1,\}\)\([-_][-a-zA-Z0-9_]\{1,\}\)\{0,1\}\.sql$/\1 &/p"
   popd >/dev/null
 }
 
