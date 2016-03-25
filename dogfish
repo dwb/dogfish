@@ -38,7 +38,14 @@ https://github.com/dwb/dogfish
 
 usage: dogfish migrate|rollback DB_NAME [FINISH_AT_MIGRATION]
        dogfish remigrate DB_NAME
-       dogfish create-migration [MIGRATION_NAME]
+       dogfish [options] create-migration [MIGRATION_NAME]
+
+create options:
+  -t | --migrate-template     file to use as template when creating migration
+  -d | --rollback-template    file to use as template when creating rollback
+
+  The above options can also be set with DOGFISH_MIGRATE_TEMPLATE and
+  DOGFISH_ROLLBACK_TEMPLATE environmental variables.
 
 where db_name is the name of the database in MySQL or PostgreSQL
       finish_at_migration is the (optional) number of the migration to finish
@@ -77,6 +84,14 @@ END
     "-r" | "--read-only")
       READ_ONLY="1"
       shift
+      ;;
+    "-t" | "--migrate-template")
+      DOGFISH_MIGRATE_TEMPLATE="${2}"
+      shift 2
+      ;;
+    "-d" | "--rollback-template")
+      DOGFISH_ROLLBACK_TEMPLATE="${2}"
+      shift 2
       ;;
     -*)
       die "unrecognised option '$1'"
@@ -380,11 +395,27 @@ function migrate() {
 }
 
 function create_migration() {
+  up_template=${1}
+  down_template=${2}
   date=$(date +%Y%m%d%H%M%S)
   migration_name=$(echo "${migration_name}" | tr ' ' '-')
   upfile=${migrations_dir}/migrate-${date}-${migration_name}.sql;
   downfile=${migrations_dir}/rollback-${date}-${migration_name}.sql;
-  touch "${upfile}" "${downfile}"
+
+  # add the up template
+  if [ -z ${up_template} ]; then
+    touch "${upfile}"
+  else
+    cp "${up_template}" "${upfile}"
+  fi
+
+  # add the down template
+  if [ -z ${down_template} ]; then
+    touch "${downfile}"
+  else
+    cp "${down_template}" "${downfile}"
+  fi
+
   echo "Created
         ${upfile}
         ${downfile}"
@@ -414,7 +445,7 @@ case $action in
     migrate "$action"
     ;;
   create-migration)
-    create_migration
+    create_migration "${DOGFISH_MIGRATE_TEMPLATE:-}" "${DOGFISH_ROLLBACK_TEMPLATE:-}"
     ;;
   dump-schema)
     if [[ -n $READ_ONLY ]]; then
