@@ -403,14 +403,14 @@ function create_migration() {
   downfile=${migrations_dir}/rollback-${date}-${migration_name}.sql;
 
   # add the up template
-  if [ -z ${up_template} ]; then
+  if [ -z "${up_template}" ]; then
     touch "${upfile}"
   else
     cp "${up_template}" "${upfile}"
   fi
 
   # add the down template
-  if [ -z ${down_template} ]; then
+  if [ -z "${down_template}" ]; then
     touch "${downfile}"
   else
     cp "${down_template}" "${downfile}"
